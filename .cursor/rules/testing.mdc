@@ -1,0 +1,69 @@
+---
+description: Vitest testing conventions — setup, patterns, assertion style
+globs: tests/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Testing
+
+## Stack
+
+- **Vitest** — test runner (configured in `vite.config.ts`)
+- **@testing-library/react** — component/hook rendering
+- **@testing-library/jest-dom** — DOM assertions (via `tests/setup.ts`)
+- **jsdom** — browser environment
+
+## Commands
+
+```bash
+npx vitest run        # single run
+npx vitest            # watch mode
+```
+
+## File Location
+
+Tests live in `tests/` at project root, named `*.test.ts` or `*.test.tsx`.
+
+## Patterns
+
+### Reducer Tests
+
+Import the reducer and initial state directly from the context file:
+
+```typescript
+import { chatReducer, chatInitialState } from '../contexts/ChatContext';
+
+it('SET_THREADS', () => {
+  const result = chatReducer(chatInitialState, { type: 'SET_THREADS', payload: threads });
+  expect(result.threads).toHaveLength(2);
+});
+```
+
+Use `toBe` for reference equality (unchanged state), `toStrictEqual` for deep equality, `toEqual` for shape checks.
+
+### Provider/Hook Integration Tests
+
+```typescript
+import { renderHook, act } from '@testing-library/react';
+import { WorkspaceProvider, useWorkspace } from '../contexts/WorkspaceContext';
+
+const wrapper = ({ children }: { children: ReactNode }) => (
+  <WorkspaceProvider>{children}</WorkspaceProvider>
+);
+
+it('updates state', () => {
+  const { result } = renderHook(() => useWorkspace(), { wrapper });
+  act(() => result.current.setCurrentView('settings'));
+  expect(result.current.state.currentView).toBe('settings');
+});
+```
+
+### Mocking
+
+Mock only external dependencies, not internal logic:
+
+```typescript
+vi.mock('../utils/formatThreadTime', () => ({
+  formatThreadTime: (input: string) => `formatted:${input}`,
+}));
+```

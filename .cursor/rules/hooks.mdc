@@ -1,0 +1,58 @@
+---
+description: Custom hook patterns — useAsync, shared chat hooks, extraction rules
+globs: hooks/**/*.ts
+alwaysApply: false
+---
+
+# Custom Hooks
+
+## `useAsync` for Data Fetching
+
+Use `useAsync` from `hooks/useAsync.ts` for any component that fetches data on mount or on dependency change:
+
+```typescript
+const { data: addons, isLoading, refetch } = useAsync(
+  () => promptAddonsService.getAddons(companyId),
+  [companyId],
+);
+```
+
+Pass `null` as fetcher to defer execution until a condition is met:
+
+```typescript
+const { data } = useAsync(
+  companyId ? () => service.get(companyId) : null,
+  [companyId],
+);
+```
+
+## Hook Extraction Rules
+
+Extract a custom hook when logic is:
+- Used in 2+ components (DRY).
+- Complex enough to obscure the component's render logic (>15 lines of stateful setup).
+- Testable in isolation (side effects, timers, subscriptions).
+
+## Existing Shared Hooks
+
+| Hook | Purpose |
+|------|---------|
+| `useAsync` | Generic async data fetching with loading/error/refetch |
+| `useChatVoiceCapture` | Voice recording lifecycle for chat composers |
+| `usePendingAttachmentUploads` | File upload queue with progress tracking |
+| `useChatNewMessageIds` | Tracks which messages are "new" for animation |
+| `useChatInputAreaHeight` | Auto-resizing textarea height |
+| `useChatRubberOverscroll` | iOS-style rubber-band scroll effect |
+| `useScrollToBottomOnLastMessage` | Auto-scroll on new messages |
+
+## Type Conventions
+
+Use explicit React types for setter props:
+
+```typescript
+import { type Dispatch, type SetStateAction } from 'react';
+
+interface Props {
+  setIsRecording: Dispatch<SetStateAction<boolean>>;
+}
+```

@@ -1,0 +1,20 @@
+---
+description: Logging rules — always use logger utility, never console.*
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Logging
+
+Use `logger` from `utils/logger.ts`. Never use `console.*` directly.
+
+```typescript
+import { logger } from '../utils/logger';
+
+logger.error('Failed to load threads', error);
+logger.warn('WebSocket reconnecting');
+logger.info('User logged in', { userId });
+logger.debug('API response', { data });
+```
+
+The only file allowed to use `console.*` is `utils/logger.ts` itself.

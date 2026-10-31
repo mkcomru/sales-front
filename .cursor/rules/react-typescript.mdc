@@ -1,0 +1,365 @@
+---
+description: React + TypeScript best practices and patterns for sales-front
+alwaysApply: true
+---
+
+# React + TypeScript Best Practices for Sales Front
+
+## Core Principles
+
+1. **Type Safety First**: No `any` types. Use `unknown` and type guards when dealing with untyped data.
+2. **State Management**: Use Context API + useReducer for global state, local state for component-specific state.
+3. **API Layer**: All API calls must go through the service layer (`services/`).
+4. **Error Handling**: Use custom error classes and toast notifications, never `alert()` or `console.error()` directly.
+5. **Logging**: Use `logger` utility from `utils/logger.ts`, never `console.log()` directly.
+6. **Performance**: Memoize components and expensive computations with `React.memo`, `useMemo`, `useCallback`.
+
+## Project Structure
+
+### Directory Organization
+- `components/` - React components (feature-based subdirectories for complex features)
+- `contexts/` - React Context providers
+- `hooks/` - Custom React hooks
+- `services/` - API service layer
+- `shared/` - Shared utilities, constants, and types
+- `types/` - TypeScript type definitions
+- `utils/` - Utility functions
+- `config/` - Configuration modules
+
+### File Naming
+- Components: `PascalCase.tsx` (e.g., `ChatWindow.tsx`)
+- Hooks: `camelCase.ts` with `use` prefix (e.g., `useWorkspace.ts`)
+- Services: `camelCase.ts` (e.g., `threadsService.ts`)
+- Types: `camelCase.ts` (e.g., `api.ts`, `errors.ts`)
+- Utils: `camelCase.ts` (e.g., `logger.ts`, `errors.ts`)
+
+## State Management
+
+### Global State Pattern
+```typescript
+// Use Context + useReducer for global state
+// Location: contexts/WorkspaceContext.tsx
+
+// 1. Define state interface
+interface WorkspaceState {
+  threads: ChatSession[];
+  selectedChatId: string;
+  // ... more state
+}
+
+// 2. Define action types
+type WorkspaceAction =
+  | { type: 'SET_THREADS'; payload: ChatSession[] }
+  | { type: 'SET_SELECTED_CHAT_ID'; payload: string }
+  // ... more actions
+
+// 3. Create reducer
+function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
+  switch (action.type) {
+    case 'SET_THREADS':
+      return { ...state, threads: action.payload };
+    // ... more cases
+    default:
+      return state;
+  }
+}
+
+// 4. Use via hook
+import { useWorkspace } from '../hooks/useWorkspace';
+const { state, dispatch, setSelectedChatId } = useWorkspace();
+```
+
+### Local State Pattern
+```typescript
+// Use useState for component-specific state
+const [isOpen, setIsOpen] = useState(false);
+```
+
+## API Layer
+
+### Service Layer Pattern
+```typescript
+// All API calls go through service layer
+// Location: services/threads.ts
+
+import { apiClient } from './api/client';
+import { API_ENDPOINTS } from './api/endpoints';
+import { handleApiError } from '../../utils/errors';
+
+export const threadsService = {
+  getThreads: async (companyId: number, params?: {...}): Promise<ApiThread[]> => {
+    try {
+      const response = await apiClient.get(
+        API_ENDPOINTS.THREADS.BY_COMPANY(companyId),
+        { params }
+      );
+      return response.data.items || [];
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+};
+```
+
+### Endpoint Constants
+```typescript
+// Centralize all endpoints
+// Location: services/api/endpoints.ts
+
+export const API_ENDPOINTS = {
+  THREADS: {
+    BY_COMPANY: (companyId: number) => `/api/v1/companies/${companyId}/threads`,
+    BY_ID: (companyId: number, threadId: string) => `/api/v1/companies/${companyId}/threads/${threadId}`,
+  },
+};
+```
+
+## Error Handling
+
+### Custom Error Classes
+```typescript
+// Use custom error classes from utils/errors.ts
+import { ApiException, NetworkException, UnauthorizedException } from '../utils/errors';
+
+try {
+  await someApiCall();
+} catch (error) {
+  if (error instanceof UnauthorizedException) {
+    // Handle unauthorized
+  } else if (error instanceof NetworkException) {
+    // Handle network error
+  } else {
+    // Handle other errors
+  }
+}
+```
+
+### Toast Notifications
+```typescript
+// Use toast notifications for user feedback
+import { useToast } from '../hooks/useToast';
+
+const toast = useToast();
+
+try {
+  await operation();
+  toast.success('Operation completed');
+} catch (error) {
+  toast.error('Operation failed');
+}
+```
+
+### Error Boundary
+```typescript
+// Wrap app with ErrorBoundary
+import { ErrorBoundary } from './components/ErrorBoundary';
+
+<ErrorBoundary>
+  <App />
+</ErrorBoundary>
+```
+
+## Logging
+
+### Logger Utility
+```typescript
+// Always use logger utility, never console.log directly
+import { logger } from '../utils/logger';
+
+logger.debug('Debug message', { context: 'value' });
+logger.info('Info message');
+logger.warn('Warning message');
+logger.error('Error message', error, { additionalContext: 'value' });
+```
+
+### Logging Configuration
+- Controlled via environment variables: `VITE_LOG_LEVEL` and `VITE_ENABLE_LOGGING`
+- Default: `debug` in development, `error` in production
+- Hot-swappable at runtime: `logger.setEnabled(false)` or `logger.setLogLevel('warn')`
+
+## Type Safety
+
+### No `any` Types
+```typescript
+// ❌ Wrong
+function processData(data: any) { ... }
+
+// ✅ Correct
+function processData(data: unknown) {
+  if (isApiResponse(data)) {
+    // Type guard narrows type
+  }
+}
+```
+
+### Type Guards
+```typescript
+// Create type guards for unknown data
+// Location: utils/typeGuards.ts
+
+export function isApiErrorResponse(obj: unknown): obj is ApiErrorResponse {
+  return typeof obj === 'object' && obj !== null && 'detail' in obj;
+}
+```
+
+### Type Definitions
+```typescript
+// Centralize types in types/ directory
+// types/api.ts - API types
+// types/errors.ts - Error types
+// types.ts - Domain types
+```
+
+## Performance Optimization
+
+### Component Memoization
+```typescript
+// Memoize components that receive stable props
+export const ChatList = React.memo<ChatListProps>(({ chats, selectedChatId, onSelectChat }) => {
+  // Component implementation
+});
+
+ChatList.displayName = 'ChatList';
+```
+
+### useMemo for Expensive Computations
+```typescript
+// Memoize filtered/transformed data
+const filteredChats = useMemo(() => {
+  return chats.filter(chat => /* filter logic */);
+}, [chats, activeTab]);
+```
+
+### useCallback for Event Handlers
+```typescript
+// Memoize callbacks passed as props
+const handleSelect = useCallback((id: string) => {
+  onSelectChat(id);
+}, [onSelectChat]);
+```
+
+## Environment Configuration
+
+### Access Environment Variables
+```typescript
+// Always use config module, never import.meta.env directly
+import { API_BASE_URL, IS_DEVELOPMENT } from '../config/env';
+```
+
+### Environment Variables
+- `VITE_API_BASE_URL`: Backend API URL (optional in dev, uses proxy)
+- `VITE_LOG_LEVEL`: Logging level (`debug` | `info` | `warn` | `error` | `silent`)
+- `VITE_ENABLE_LOGGING`: Enable/disable logging (`true` | `false`)
+
+## Component Patterns
+
+### Component Structure
+```typescript
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useWorkspace } from '../hooks/useWorkspace';
+import { logger } from '../utils/logger';
+import { useToast } from '../hooks/useToast';
+
+interface ComponentProps {
+  // Props interface
+}
+
+export const Component: React.FC<ComponentProps> = ({ prop1, prop2 }) => {
+  // Hooks
+  const { state, dispatch } = useWorkspace();
+  const toast = useToast();
+  
+  // Local state
+  const [localState, setLocalState] = useState(false);
+  
+  // Memoized values
+  const computedValue = useMemo(() => {
+    return expensiveComputation();
+  }, [dependencies]);
+  
+  // Memoized callbacks
+  const handleAction = useCallback(() => {
+    // Action logic
+  }, [dependencies]);
+  
+  // Effects
+  useEffect(() => {
+    // Effect logic
+  }, [dependencies]);
+  
+  // Render
+  return (
+    <div>
+      {/* JSX */}
+    </div>
+  );
+};
+```
+
+## Code Style
+
+### Imports Order
+1. React imports
+2. Third-party libraries
+3. Internal imports (components, hooks, services, utils)
+4. Types
+5. Styles (if any)
+
+### Naming Conventions
+- Components: `PascalCase`
+- Functions/variables: `camelCase`
+- Constants: `UPPER_SNAKE_CASE`
+- Types/interfaces: `PascalCase`
+- Files: Match export (component files = PascalCase, others = camelCase)
+
+### Comments
+- Use comments to explain **why**, not **what**
+- Document complex logic or non-obvious decisions
+- Use JSDoc for public APIs
+
+## Testing Considerations
+
+### Testable Code
+- Keep components small and focused
+- Extract business logic to hooks or utils
+- Use dependency injection for services
+- Mock API calls in tests
+
+## Common Patterns
+
+### Polling
+```typescript
+// Use usePolling hook
+import { usePolling } from '../hooks/usePolling';
+
+usePolling({
+  enabled: !!companyId,
+  interval: 10000,
+  callback: useCallback(() => {
+    fetchData();
+  }, [fetchData])
+});
+```
+
+### Retry Logic
+```typescript
+// Use useRetry hook for failed requests
+import { useRetry } from '../hooks/useRetry';
+
+const { execute, isLoading, error } = useRetry(apiCall, {
+  maxAttempts: 3,
+  delay: 1000,
+  exponentialBackoff: true
+});
+```
+
+## Anti-Patterns to Avoid
+
+1. ❌ **Don't use `any` types** - Use `unknown` and type guards
+2. ❌ **Don't use `console.log`** - Use `logger` utility
+3. ❌ **Don't use `alert()`** - Use toast notifications
+4. ❌ **Don't access `import.meta.env` directly** - Use config module
+5. ❌ **Don't make API calls directly** - Use service layer
+6. ❌ **Don't create large components** - Break down into smaller components
+7. ❌ **Don't ignore TypeScript errors** - Fix type issues properly
+8. ❌ **Don't mutate state directly** - Always return new state objects

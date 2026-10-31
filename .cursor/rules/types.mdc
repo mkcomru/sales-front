@@ -1,0 +1,27 @@
+---
+description: Type definition conventions — single source of truth, re-export pattern
+globs: types/**/*.ts, types.ts
+alwaysApply: false
+---
+
+# Types
+
+## Source of Truth
+
+`types/api.ts` is the canonical source for all API/backend types. `types.ts` re-exports from `types/api.ts` and adds frontend-only display models.
+
+```typescript
+// types.ts — re-exports canonical types
+export type { Order, Thread, Stage, CompanyField, ... } from './types/api';
+
+// Frontend-only types defined here
+export interface ChatSession { ... }
+export interface Message { ... }
+```
+
+## Rules
+
+- Never duplicate a type that already exists in `types/api.ts`.
+- New backend response types go in `types/api.ts`.
+- New frontend display models go in `types.ts`.
+- Shared utility types go in `shared/index.ts`.

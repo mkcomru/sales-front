@@ -1,0 +1,50 @@
+---
+description: CSS and Tailwind standards for sales-front — reusable classes, theme tokens, component patterns
+globs: **/*.tsx, **/*.ts, **/*.css, **/*.html
+alwaysApply: false
+---
+# CSS & Tailwind Standards
+
+Tailwind is build-time via `tailwind.config.ts` + PostCSS. **No CDN, no inline config.**
+
+## Theme Tokens (use instead of hex)
+
+| Token | Hex | Usage |
+|-------|-----|-------|
+| `bg-sidebar` | `#F9F9FB` | Page backgrounds, panels |
+| `text-primary` | `#111827` | Primary text |
+| `text-secondary` | `#6B7280` | Secondary text |
+| `bg-accent` / `text-accent` | `#6366F1` | Accent/indigo |
+| `bg-bubble-note` | `#FEF3C7` | Note mode backgrounds |
+| `bg-stage-default` | `#64748b` | Stage color fallback |
+
+**Never** write `bg-[#F9F9FB]`, `text-[#111827]`, etc. Use the token.
+
+## Reusable Classes (defined in `index.css` `@layer components`)
+
+| Class | For |
+|-------|-----|
+| `form-input` | Text/number inputs |
+| `form-input-mono` | Monospace inputs |
+| `form-textarea` | Textareas (rounded-xl) |
+| `form-textarea-mono` | Monospace textareas |
+| `form-select` | Select dropdowns |
+| `form-checkbox` | Checkbox styling |
+| `form-label` | Uppercase field labels |
+| `btn-primary` | Dark (gray-900) button |
+| `btn-accent` | Indigo button |
+| `btn-ghost` | Text/cancel button |
+| `btn-danger` | Red button |
+| `btn-sm` | Smaller size modifier |
+| `card` | White card + border + shadow |
+| `page-shell` | Centered page with sidebar bg |
+
+Override with additional classes: `className="form-input pl-10"`, `className="form-textarea min-h-[200px]"`
+
+## Rules
+
+- **Use existing classes** — don't reinvent input/label/button styles per component.
+- **Use `FormCheckbox` component** for all checkboxes — never write raw `<input type="checkbox">` with ad-hoc styling.
+- **No `font-sans` on components** — it's on `<body>`.
+- **New reusable patterns** go in `index.css` `@layer components`, not as local constants.
+- **Dynamic colors** in `style={{}}` are fine (e.g. stage colors from API).

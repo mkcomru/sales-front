@@ -1,0 +1,45 @@
+---
+description: Context API split architecture and state management patterns
+globs: contexts/**/*.tsx, hooks/use*.ts
+alwaysApply: false
+---
+
+# State Management
+
+## Context Architecture
+
+Global state is split into three focused contexts, composed by `WorkspaceProvider`:
+
+| Context | File | Owns |
+|---------|------|------|
+| `ChatContext` | `contexts/ChatContext.tsx` | threads, messages, selectedChatId, threadsFilter, stagesConfig, orderUpdateSignal |
+| `IdentityContext` | `contexts/IdentityContext.tsx` | currentUser, companyMemberId, balance, companyFields, init state |
+| `UIContext` | `contexts/UIContext.tsx` | currentView, profile/modal/search toggles |
+
+`WorkspaceContext.tsx` is a **facade only** — it nests the three providers and exposes `useWorkspace()` for backward compatibility. No reducer logic lives there.
+
+## Consuming State
+
+Use the focused hook for the context you need:
+
+```typescript
+// ✅ Direct — use when you only need one slice
+const { chatState, setSelectedChatId } = useChatContext();
+const { identityState } = useIdentityContext();
+const { uiState, setCurrentView } = useUIContext();
+
+// ⚠️ Facade — avoid for new code, exists for backward compat
+const { state, dispatch } = useWorkspace();
+```
+
+## Adding New State
+
+1. Identify which slice it belongs to (chat, identity, or UI).
+2. Add the field to the appropriate `*State` interface and `*Action` union.
+3. Handle it in the corresponding `*Reducer` with a `case` branch.
+4. Expose a convenience action in the context's provider if it's used in 3+ places.
+5. **Never** add state to `WorkspaceContext.tsx` — it's a facade.
+
+## Resetting State
+
+Each sub-context has its own reset action: `RESET_CHAT`, `RESET_IDENTITY`, `RESET_UI`. Full reset dispatches all three.

@@ -1,0 +1,45 @@
+---
+description: API service layer conventions — api<T> wrapper, no try/catch in services
+globs: services/**/*.ts
+alwaysApply: false
+---
+
+# Service Layer
+
+## The `api<T>` Wrapper
+
+All service methods use the generic `api<T>` wrapper from `services/api/client.ts` instead of manual try/catch:
+
+```typescript
+// ✅ Correct
+import { api, apiClient } from './api/client';
+
+export const ordersService = {
+  getOrders: (companyId: number) =>
+    api<Order[]>(apiClient.get(`/api/v1/companies/${companyId}/orders`)),
+
+  createOrder: (companyId: number, data: CreateOrderPayload) =>
+    api<Order>(apiClient.post(`/api/v1/companies/${companyId}/orders`, data)),
+};
+```
+
+```typescript
+// ❌ Wrong — boilerplate try/catch
+export const ordersService = {
+  getOrders: async (companyId: number) => {
+    try {
+      const response = await apiClient.get(`/api/v1/companies/${companyId}/orders`);
+      return response.data;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+};
+```
+
+## Rules
+
+- `api<T>` unwraps `AxiosResponse<T>` to `T` and calls `handleApiError` on failure.
+- Services are plain objects with methods, not classes.
+- One service file per domain (`orders.ts`, `threads.ts`, `auth.ts`).
+- Never import `handleApiError` in service files — `api<T>` handles it.
